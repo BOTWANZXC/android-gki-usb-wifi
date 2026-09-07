@@ -70,6 +70,32 @@ cable**. Stable external power makes the timeout disappear entirely.
 
 ---
 
+## Module builds fine but won't load: `Unknown symbol X (err -2)`
+
+```
+mt7601u: Unknown symbol firmware_request_cache (err -2)
+```
+
+**Cause:** this is a **GKI limitation**, not a build error. GKI kernels only
+export the symbols on Google's approved **KMI list**. An in-tree driver may call
+a kernel helper that simply isn't exported to modules, so it compiles fine and
+then fails at `insmod`.
+
+**Fix:** if the call is only an optimisation, patch it out before building. The
+workflow already does this for `mt7601u` (it drops `firmware_request_cache()`,
+which only caches firmware across suspend/resume). If you hit this with another
+driver:
+
+1. Note the symbol name from `dmesg`.
+2. Find it in the driver source: `grep -rn "<symbol>" drivers/net/wireless/...`
+3. Decide whether it's essential. Caching/debug/statistics helpers usually
+   aren't; anything in the data path is.
+4. If it's safe to drop, add a `sed` for it in the workflow's *Patch driver
+   sources for GKI symbol limits* step and rebuild.
+
+If the symbol **is** essential, that driver can't be used as an external module
+on a stock GKI kernel — you'd need a kernel that exports it.
+
 ## Modules don't load: `disagrees about version of symbol module_layout`
 
 ```

@@ -104,6 +104,33 @@ jobs:
           rm -f k.tar.gz
           ls ks/Makefile && head -3 ks/Makefile
 
+      - name: Patch drivers for GKI KMI limits
+        working-directory: ks
+        env:
+          DRIVER: ${{ github.event.inputs.driver }}
+        run: |
+          # GKI trims symbol exports to the KMI list (CONFIG_TRIM_UNUSED_KSYMS).
+          # A driver can build fine yet fail to load with "Unknown symbol X"
+          # because X simply isn't exported by the running kernel.
+          #
+          # mt7601u calls firmware_request_cache(), which is NOT in the KMI.
+          # That call only pre-caches firmware for suspend/resume, so making it
+          # a no-op is safe: the driver still loads firmware normally via
+          # request_firmware().
+          if [ "$DRIVER" = "mt7601u" ]; then
+            F=$(grep -rl 'firmware_request_cache' drivers/net/wireless/mediatek/mt7601u/ | head -1)
+            if [ -n "$F" ]; then
+              echo "patching $F (firmware_request_cache -> no-op)"
+              LINE=$(grep -n 'firmware_request_cache(' "$F" | head -1 | cut -d: -f1)
+              sed -i "${LINE}i #define firmware_request_cache(d, n) (0) /* GKI: symbol not in KMI */" "$F"
+              grep -n -B1 -A1 'firmware_request_cache' "$F" | head -20
+            else
+              echo "note: firmware_request_cache not found in mt7601u sources (newer kernel?) - nothing to patch"
+            fi
+          else
+            echo "no KMI patches needed for $DRIVER"
+          fi
+
       - name: Fetch Android Clang
         run: |
           mkdir -p clang

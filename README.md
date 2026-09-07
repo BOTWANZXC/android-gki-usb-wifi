@@ -76,11 +76,17 @@ hardware-verified · OOT = out-of-tree, may not build on every kernel.
 |---|---|---|---|---|
 | `mt76x2u` | MT7612U / MT7662 | yes | `mt7662*.bin` | **tested** (AWUS036ACM) |
 | `mt76x0u` | MT7610U/7630U/7650U | yes | `mt7610u.bin` … | built |
-| `mt7601u` | MT7601U (2.4GHz) | yes | `mt7601u.bin` | built |
+| `mt7601u` | MT7601U (2.4GHz) | yes | `mt7601u.bin` | built (needs a small GKI source patch, applied automatically) |
 | `rt2800usb` | RT5370/5372/3070/3072/2870/3572 | yes | none | built (no firmware needed) |
 | `ath9k_htc` | AR9271, AR7010 | yes | `htc_9271.fw`/`htc_7010.fw` | built (proven on this SoC in prior work) |
 | `rtl8xxxu` | RTL8188CU/EU, RTL8192CU/EU | yes | none | built |
 | `rtl88xxau_oot` | RTL8812AU/8814AU/8811AU/8821AU | **no** | in-driver | OOT |
+
+\* **"in-tree" isn't a guarantee on GKI.** GKI kernels export only an approved
+symbol list (the KMI), so a driver can build perfectly and still fail to load
+with `Unknown symbol …`. `mt7601u` hits this (`firmware_request_cache`); the
+workflow patches it automatically. See
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md#module-builds-fine-but-wont-load-unknown-symbol-x-err--2).
 
 `detect.sh` recognizes ~55 USB IDs across these families and picks the driver +
 firmware automatically. It also flags adapters that show up in **CD-ROM /
@@ -100,6 +106,13 @@ adapter may still work; you'll just need to identify the chipset yourself.
 
 `android12-5.10` · `android13-5.15` · `android14-6.1` · `android15-6.6`
 (the `kbranch` build input; `detect.sh` reports which one you're on).
+
+**A GKI caveat worth knowing:** GKI kernels only export the symbols on Google's
+approved **KMI list**. Some in-tree drivers call helpers that aren't exported, so
+they compile but fail at load with `Unknown symbol ... (err -2)`. Where the call
+is only an optimisation the workflow patches it out automatically (it does this
+for `mt7601u`); where it's essential, that driver can't run as an external module
+on a stock GKI kernel. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 **Honest limits:** modules only load if your kernel's commit is **public** on
 the Android Common Kernel tree and the kernel doesn't enforce module signatures.
