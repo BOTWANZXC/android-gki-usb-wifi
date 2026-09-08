@@ -74,7 +74,7 @@ hardware-verified · OOT = out-of-tree, may not build on every kernel.
 
 | `driver` input | Chips | In-tree | Firmware | Status |
 |---|---|---|---|---|
-| `mt76x2u` | MT7612U / MT7662 | yes | `mt7662*.bin` | **tested** — monitor confirmed (AWUS036ACM) |
+| `mt76x2u` | MT7612U / MT7662 | yes | `mt7662*.bin` | **tested** — monitor **and injection** confirmed (AWUS036ACM) |
 | `mt76x0u` | MT7610U/7630U/7650U | yes | `mt7610u.bin` … | built |
 | `mt7601u` | MT7601U (2.4GHz) | yes* | `mt7601u.bin` | **tested** — monitor **and injection** confirmed |
 | `rt2800usb` | RT5370/5372/3070/3072/2870/3572 | yes | none | built (no firmware needed) |
@@ -289,12 +289,12 @@ The Magisk module ships its own `service.sh` (boot loader) and `action.sh`
 ## Warnings
 
 - **Only for networks you own or are explicitly authorized to test.**
-- **Only `mt76x2u` on the P30T is hardware-verified.** Other drivers are built
-  correctly but not yet tested on real hardware — treat "built"/OOT rows as
-  best-effort. Reports welcome.
+- **Two drivers are hardware-verified so far** (`mt76x2u` and `mt7601u`, both
+  monitor + injection, on the P30T). The rest build correctly but aren't
+  confirmed on real hardware — treat those rows as best-effort. Reports welcome.
 - This is a **hybrid** wireless runtime (stock `cfg80211` + custom `mac80211`).
-  Monitor mode + scanning work; injection wasn't exhaustively validated — test
-  with `aireplay-ng --test wlan1`.
+  Both tested adapters do monitor mode **and** injection; other drivers are
+  unverified — check yours with `aireplay-ng --test wlan1`.
 - **Open NetHunter once per boot before plugging in the adapter.** Monitor mode
   is set via `iw` inside the Kali chroot; its mounts must be active first, or the
   switch fails silently (the adapter still appears as `wlan1`).

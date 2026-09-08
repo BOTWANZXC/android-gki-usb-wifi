@@ -17,7 +17,7 @@ Tested on a confirmed device above.
 
 | Adapter | Chipset | USB ID | Driver | Monitor | Injection | Notes |
 |---|---|---|---|---|---|---|
-| ALFA AWUS036ACM | MT7612U | `0e8d:7612` | `mt76x2u` | ✅ | not tested | dual-band; needs `mt7662*.bin` |
+| ALFA AWUS036ACM | MT7612U | `0e8d:7612` | `mt76x2u` | ✅ | ✅ | dual-band; needs `mt7662*.bin` |
 | generic USB dongle | MT7601U | `148f:7601` | `mt7601u` | ✅ | ✅ | 2.4GHz only; very common cheap dongle; needs the GKI KMI patch (applied automatically by the workflow) |
 
 ## Known limitation: one adapter module at a time
