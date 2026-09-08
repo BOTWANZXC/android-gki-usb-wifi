@@ -74,9 +74,9 @@ hardware-verified · OOT = out-of-tree, may not build on every kernel.
 
 | `driver` input | Chips | In-tree | Firmware | Status |
 |---|---|---|---|---|
-| `mt76x2u` | MT7612U / MT7662 | yes | `mt7662*.bin` | **tested** (AWUS036ACM) |
+| `mt76x2u` | MT7612U / MT7662 | yes | `mt7662*.bin` | **tested** — monitor confirmed (AWUS036ACM) |
 | `mt76x0u` | MT7610U/7630U/7650U | yes | `mt7610u.bin` … | built |
-| `mt7601u` | MT7601U (2.4GHz) | yes | `mt7601u.bin` | built (needs a small GKI source patch, applied automatically) |
+| `mt7601u` | MT7601U (2.4GHz) | yes* | `mt7601u.bin` | **tested** — monitor **and injection** confirmed |
 | `rt2800usb` | RT5370/5372/3070/3072/2870/3572 | yes | none | built (no firmware needed) |
 | `ath9k_htc` | AR9271, AR7010 | yes | `htc_9271.fw`/`htc_7010.fw` | built (proven on this SoC in prior work) |
 | `rtl8xxxu` | RTL8188CU/EU, RTL8192CU/EU | yes | none | built |
@@ -162,6 +162,10 @@ choice for next boot):
 > The Action button needs **Magisk v27+** (or KernelSU/APatch — the same zip
 > works on all three). On older Magisk the module still works; just set monitor
 > mode from the NetHunter chroot.
+
+**Use one adapter module at a time.** Each adapter gets its own module; having
+two enabled together doesn't work. To switch adapters: disable the current
+module, enable the other, reboot, then plug that adapter in.
 
 If it worked on your device, there's a pre-filled compatibility-report link
 waiting in `/data/adb/modules/gki_usb_wifi_*/report-link.txt` — opening it is

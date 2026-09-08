@@ -35,6 +35,13 @@ done
 echo "$FWDIR" > /sys/module/firmware_class/parameters/path 2>/dev/null
 log "firmware staged at $FWDIR"
 
+# Warn if more than one adapter module is enabled - they fight over wlan1.
+N=$(ls -d /data/adb/modules/gki_usb_wifi_* 2>/dev/null | wc -l)
+if [ "$N" -gt 1 ]; then
+  log "WARNING: $N gki_usb_wifi modules are installed. Enable only the one for"
+  log "         the adapter you're using, then reboot - two will conflict."
+fi
+
 # 3) load modules with USB autoprobe OFF so module_init never touches the HW
 echo 0 > /sys/bus/usb/drivers_autoprobe 2>/dev/null
 for m in "$KMOD"/mac80211.ko "$KMOD"/mt76.ko "$KMOD"/mt76-usb.ko \

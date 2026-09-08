@@ -135,6 +135,29 @@ Also delete any leftover old clone: `rm -rf ~/p30t-mt76`.
 
 ---
 
+## Two adapter modules enabled at once
+
+Each adapter has its own flashable module. **Only one should be enabled.** With
+two enabled, both `service.sh` scripts run at boot and both `action.sh` buttons
+target `wlan1`, so behaviour is unpredictable (typically the adapter you want
+doesn't come up, or Action reports `wlan1 not present`).
+
+**Switching adapters:**
+
+1. Magisk/KernelSU → Modules → **disable** the module you're not using,
+   **enable** the one you want
+2. **Reboot** (loaded kernel modules only go away on reboot)
+3. Plug that adapter in
+
+You can verify which driver is live:
+
+```
+su
+lsmod | grep -E "mt76|mt7601|rt2800|ath9k|rtl8"
+```
+
+---
+
 ## Kernel panic / reboot when loading the driver
 
 ```
