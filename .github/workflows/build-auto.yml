@@ -264,11 +264,18 @@ jobs:
           # kernel refuses to load them (ENOEXEC), even with matching
           # vermagic. Match the device exactly.
           ./scripts/config --file out/.config \
+            -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN \
             -e CFI_CLANG -e CFI_CLANG_SHADOW -e SHADOW_CALL_STACK
 
           make LLVM=1 LLVM_IAS=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out olddefconfig
           echo "--- result ---"
           grep -E "CONFIG_(CFG80211=|MAC80211=|MT76|RT2X00|RT2800|ATH9K|RTL8XXXU|DEBUG_INFO_BTF|LTO_CLANG|CFI_CLANG|SHADOW_CALL_STACK)" out/.config || true
+          echo "--- LTO/CFI diagnostic (why HAS_LTO_CLANG might be off) ---"
+          grep -E "CONFIG_(CC_IS_CLANG|CLANG_VERSION|LD_IS_LLD|ARCH_SUPPORTS_LTO_CLANG|HAS_LTO_CLANG|FTRACE_MCOUNT_USE_RECORDMCOUNT|FTRACE_MCOUNT_USE_PATCHABLE|FTRACE_MCOUNT_USE_CC|KASAN|GCOV_KERNEL|COMPILE_TEST)" out/.config || true
+          echo "--- toolchain LLVM markers ---"
+          ${GITHUB_WORKSPACE}/clang/bin/clang --version
+          which aarch64-linux-gnu-nm aarch64-linux-gnu-ar 2>&1 || true
+          ls ${GITHUB_WORKSPACE}/clang/bin/ | grep -E "^llvm-(nm|ar)$|^ld.lld$" || true
 
       - name: Prepare kernel for external modules
         working-directory: ks
