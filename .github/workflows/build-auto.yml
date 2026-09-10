@@ -280,14 +280,18 @@ jobs:
             *)    : ;;
           esac
 
-          # This device's stock kernel also enables kernel-CFI, the shadow
-          # call stack, and KASAN_HW_TAGS (ARM MTE). Modules built without
-          # matching these use a different ABI/symbol CRCs and the running
-          # kernel refuses to load them. Now that the as-instr probe above
-          # can see MTE/LSE-atomics support via Clang's integrated
-          # assembler, the device config's own KASAN_HW_TAGS=y should
-          # resolve correctly - only force CFI/SCS/LTO, which don't have
-          # an assembler-capability gate of their own.
+          # Even with Clang's integrated assembler forced for the as-instr
+          # probe, KASAN_HW_TAGS (ARM MTE) still doesn't resolve on this
+          # toolchain/runner - and critically, KASAN_GENERIC (the choice
+          # fallback) is NOT just a CRC-level mismatch but a structural one:
+          # insmod fails with ENOEXEC against it, same as before we touched
+          # CFI/SCS at all. KASAN fully disabled, by contrast, IS structurally
+          # compatible (confirmed: gets past ENOEXEC to symbol resolution).
+          # So: disable KASAN outright (unblocks LTO/CFI, structurally fine)
+          # rather than accept GENERIC (structurally broken) or fight MTE
+          # detection further.
+          ./scripts/config --file out/.config -d KASAN -d KASAN_GENERIC -d KASAN_HW_TAGS -d KASAN_SW_TAGS
+
           ./scripts/config --file out/.config \
             -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN \
             -e CFI_CLANG -e CFI_CLANG_SHADOW -e SHADOW_CALL_STACK
