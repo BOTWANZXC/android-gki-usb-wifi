@@ -105,6 +105,15 @@ jobs:
           rm -f k.tar.gz
           ls ks/Makefile && head -3 ks/Makefile
 
+      - name: Force exact KERNELRELEASE to match device
+        # The archive from googlesource has no .git, so scripts/setlocalversion
+        # walks up and picks the OUTER checkout's git (this repo!), producing a
+        # vermagic that can never match the device. .scmversion short-circuits
+        # that lookup and pins the exact suffix the device reports.
+        run: |
+          echo "-android12-9-00013-gd09ef2e980e0-ab13968955" > ks/.scmversion
+          cat ks/.scmversion
+
       - name: Patch drivers for GKI KMI limits
         working-directory: ks
         env:
