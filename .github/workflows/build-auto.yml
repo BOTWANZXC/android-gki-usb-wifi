@@ -184,66 +184,60 @@ jobs:
           DRIVER: ${{ github.event.inputs.driver }}
           BTF: ${{ github.event.inputs.btf }}
           LTO: ${{ github.event.inputs.lto }}
+          KREL: 5.10.237-android12-9-00013-gd09ef2e980e0-ab13968955
         run: |
           export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
 
+          DEVCFG="$GITHUB_WORKSPACE/device-config/$KREL.config"
+          if [ -f "$DEVCFG" ]; then
+            # We have the device's OWN real .config (from /proc/config.gz).
+            # Every OEM-specific flag (LTO, CFI, SCS, and anything else we
+            # haven't thought of) is already correct in it - seed from that
+            # instead of guessing at gki_defconfig + manual overrides.
+            echo "Using real device config: $DEVCFG"
+            mkdir -p out
+            cp "$DEVCFG" out/.config
+            make LLVM=1 LLVM_IAS=1 ARCH=arm64 O=out olddefconfig
+          else
+            make LLVM=1 LLVM_IAS=1 ARCH=arm64 O=out gki_defconfig
+          fi
+
           # Base symbols every path needs
-          {
-            echo "CONFIG_WLAN=y"
-            echo "CONFIG_CFG80211=m"
-            echo "CONFIG_USB=y"
-          } >> arch/arm64/configs/gki_defconfig
+          ./scripts/config --file out/.config -e WLAN -m CFG80211 -e USB
 
           # mac80211 is needed by every driver EXCEPT the Realtek out-of-tree one,
           # which ships its own stack. Add it unless that path is chosen.
           if [ "$DRIVER" != "rtl88xxau_oot" ]; then
-            echo "CONFIG_MAC80211=m" >> arch/arm64/configs/gki_defconfig
+            ./scripts/config --file out/.config -m MAC80211
           fi
 
-          # Driver-specific in-tree symbols
+          # Driver-specific in-tree symbols, applied directly to out/.config
+          cfg() { ./scripts/config --file out/.config "$@"; }
           case "$DRIVER" in
             mt76x2u)
-              printf '%s\n' \
-                CONFIG_WLAN_VENDOR_MEDIATEK=y \
-                CONFIG_MT76_CORE=m CONFIG_MT76_USB=m \
-                CONFIG_MT76x02_LIB=m CONFIG_MT76x02_USB=m \
-                CONFIG_MT76x2_COMMON=m CONFIG_MT76x2U=m >> arch/arm64/configs/gki_defconfig ;;
+              cfg -e WLAN_VENDOR_MEDIATEK -m MT76_CORE -m MT76_USB \
+                -m MT76x02_LIB -m MT76x02_USB -m MT76x2_COMMON -m MT76x2U ;;
             mt76x0u)
-              printf '%s\n' \
-                CONFIG_WLAN_VENDOR_MEDIATEK=y \
-                CONFIG_MT76_CORE=m CONFIG_MT76_USB=m \
-                CONFIG_MT76x02_LIB=m CONFIG_MT76x02_USB=m \
-                CONFIG_MT76x0_COMMON=m CONFIG_MT76x0U=m >> arch/arm64/configs/gki_defconfig ;;
+              cfg -e WLAN_VENDOR_MEDIATEK -m MT76_CORE -m MT76_USB \
+                -m MT76x02_LIB -m MT76x02_USB -m MT76x0_COMMON -m MT76x0U ;;
             mt7601u)
-              printf '%s\n' \
-                CONFIG_WLAN_VENDOR_MEDIATEK=y \
-                CONFIG_MT7601U=m >> arch/arm64/configs/gki_defconfig ;;
+              cfg -e WLAN_VENDOR_MEDIATEK -m MT7601U ;;
             rt2800usb)
-              printf '%s\n' \
-                CONFIG_WLAN_VENDOR_RALINK=y \
-                CONFIG_RT2X00=m CONFIG_RT2X00_LIB_USB=m \
-                CONFIG_RT2800USB=m \
-                CONFIG_RT2800USB_RT33XX=y CONFIG_RT2800USB_RT35XX=y \
-                CONFIG_RT2800USB_RT3573=y CONFIG_RT2800USB_RT53XX=y \
-                CONFIG_RT2800USB_RT55XX=y CONFIG_RT2800USB_UNKNOWN=y >> arch/arm64/configs/gki_defconfig ;;
+              cfg -e WLAN_VENDOR_RALINK -m RT2X00 -m RT2X00_LIB_USB -m RT2800USB \
+                -e RT2800USB_RT33XX -e RT2800USB_RT35XX -e RT2800USB_RT3573 \
+                -e RT2800USB_RT53XX -e RT2800USB_RT55XX -e RT2800USB_UNKNOWN ;;
             ath9k_htc)
-              printf '%s\n' \
-                CONFIG_WLAN_VENDOR_ATH=y \
-                CONFIG_ATH9K_HW=m CONFIG_ATH9K_COMMON=m CONFIG_ATH9K_HTC=m >> arch/arm64/configs/gki_defconfig ;;
+              cfg -e WLAN_VENDOR_ATH -m ATH9K_HW -m ATH9K_COMMON -m ATH9K_HTC ;;
             rtl8xxxu)
               # in-tree Realtek USB (RTL8188/8192 CU/EU/RU etc.)
-              printf '%s\n' \
-                CONFIG_WLAN_VENDOR_REALTEK=y \
-                CONFIG_RTL8XXXU=m CONFIG_RTL8XXXU_UNTESTED=y >> arch/arm64/configs/gki_defconfig ;;
+              cfg -e WLAN_VENDOR_REALTEK -m RTL8XXXU -e RTL8XXXU_UNTESTED ;;
             rtl88xxau_oot)
               # out-of-tree (RTL8812AU/8814AU/8821AU) - built in a later step.
               # Only mac80211/cfg80211 base is needed here; driver brings the rest.
-              echo "CONFIG_MAC80211=m" >> arch/arm64/configs/gki_defconfig ;;
+              cfg -m MAC80211 ;;
             *)
               echo "::error::Unknown driver $DRIVER"; exit 1 ;;
           esac
-
-          make LLVM=1 LLVM_IAS=1 ARCH=arm64 O=out gki_defconfig
 
           if [ "$BTF" != "y" ]; then
             ./scripts/config --file out/.config -d DEBUG_INFO_BTF
