@@ -243,7 +243,7 @@ jobs:
               echo "::error::Unknown driver $DRIVER"; exit 1 ;;
           esac
 
-          make LLVM=1 ARCH=arm64 O=out gki_defconfig
+          make LLVM=1 LLVM_IAS=1 ARCH=arm64 O=out gki_defconfig
 
           if [ "$BTF" != "y" ]; then
             ./scripts/config --file out/.config -d DEBUG_INFO_BTF
@@ -263,7 +263,7 @@ jobs:
           ./scripts/config --file out/.config \
             -e CFI_CLANG -e CFI_CLANG_SHADOW -e SHADOW_CALL_STACK
 
-          make LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out olddefconfig
+          make LLVM=1 LLVM_IAS=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out olddefconfig
           echo "--- result ---"
           grep -E "CONFIG_(CFG80211=|MAC80211=|MT76|RT2X00|RT2800|ATH9K|RTL8XXXU|DEBUG_INFO_BTF|LTO_CLANG|CFI_CLANG|SHADOW_CALL_STACK)" out/.config || true
 
@@ -272,7 +272,7 @@ jobs:
         run: |
           export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
           # modules_prepare lets out-of-tree drivers build against this config
-          make LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out modules_prepare
+          make LLVM=1 LLVM_IAS=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out modules_prepare
 
       - name: Add swap
         run: |
@@ -287,7 +287,7 @@ jobs:
         working-directory: ks
         run: |
           export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
-          make LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out -j$(nproc)
+          make LLVM=1 LLVM_IAS=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out -j$(nproc)
 
       - name: Build out-of-tree Realtek driver
         if: ${{ github.event.inputs.driver == 'rtl88xxau_oot' }}
