@@ -254,9 +254,17 @@ jobs:
             *)    : ;;
           esac
 
+          # This device's stock kernel also enables kernel-CFI and the
+          # shadow call stack. Modules built without them use a different
+          # ABI (no CFI jump tables / no SCS prologues) and the running
+          # kernel refuses to load them (ENOEXEC), even with matching
+          # vermagic. Match the device exactly.
+          ./scripts/config --file out/.config \
+            -e CFI_CLANG -e CFI_CLANG_SHADOW -e SHADOW_CALL_STACK
+
           make LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out olddefconfig
           echo "--- result ---"
-          grep -E "CONFIG_(CFG80211=|MAC80211=|MT76|RT2X00|RT2800|ATH9K|RTL8XXXU|DEBUG_INFO_BTF|LTO_CLANG)" out/.config || true
+          grep -E "CONFIG_(CFG80211=|MAC80211=|MT76|RT2X00|RT2800|ATH9K|RTL8XXXU|DEBUG_INFO_BTF|LTO_CLANG|CFI_CLANG|SHADOW_CALL_STACK)" out/.config || true
 
       - name: Prepare kernel for external modules
         working-directory: ks
