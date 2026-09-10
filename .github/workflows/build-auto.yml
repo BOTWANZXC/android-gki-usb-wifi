@@ -251,6 +251,7 @@ jobs:
           case "$LTO" in
             thin) ./scripts/config --file out/.config -d LTO_CLANG_FULL -e LTO_CLANG_THIN ;;
             none) ./scripts/config --file out/.config -d LTO_CLANG_FULL -d LTO_CLANG_THIN -e LTO_NONE ;;
+            full) ./scripts/config --file out/.config -e LTO_CLANG_FULL -d LTO_CLANG_THIN -d LTO_NONE ;;
             *)    : ;;
           esac
 
