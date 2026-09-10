@@ -178,6 +178,24 @@ jobs:
           sh -n packaging/service.sh && echo "service.sh OK"
           sh -n packaging/action.sh && echo "action.sh OK"
 
+      - name: Patch Kconfig as-instr probe to use Clang's integrated assembler
+        working-directory: ks
+        run: |
+          # scripts/Kconfig.include's as-instr macro tests instruction support
+          # via $(CC) $(CLANG_FLAGS), and CLANG_FLAGS carries -fno-integrated-as
+          # unconditionally for this probe (independent of our LLVM_IAS=1,
+          # which only affects the real build). That routes MTE/LSE-atomics
+          # detection (AS_HAS_LSE_ATOMICS, AS_HAS_ARMV8_5 -> ARM64_MTE ->
+          # HAVE_ARCH_KASAN_HW_TAGS) through the runner's plain
+          # binutils-aarch64-linux-gnu, which doesn't support them ("LSE
+          # atomics not supported by binutils"), so KASAN_HW_TAGS silently
+          # falls back to KASAN_GENERIC, which then blocks HAS_LTO_CLANG
+          # ('!KASAN || KASAN_HW_TAGS'). Clang's own integrated assembler
+          # supports both fine - force it for this probe specifically.
+          grep -n '^as-instr' scripts/Kconfig.include
+          sed -i 's/^as-instr = .*/as-instr = $(success,printf "%b\\n" "$(1)" | $(CC) $(CLANG_FLAGS) -fintegrated-as -c -x assembler -o \/dev\/null -)/' scripts/Kconfig.include
+          grep -n '^as-instr' scripts/Kconfig.include
+
       - name: Configure
         working-directory: ks
         env:
@@ -234,7 +252,11 @@ jobs:
             rt2800usb)
               cfg -e WLAN_VENDOR_RALINK -m RT2X00 -m RT2X00_LIB_USB -m RT2800USB \
                 -e RT2800USB_RT33XX -e RT2800USB_RT35XX -e RT2800USB_RT3573 \
-                -e RT2800USB_RT53XX -e RT2800USB_RT55XX -e RT2800USB_UNKNOWN ;;
+                -e RT2800USB_RT53XX -e RT2800USB_RT55XX -e RT2800USB_UNKNOWN
+              # LED-blink-on-activity support pulls in led_classdev_suspend/
+              # resume, which this device's kernel doesn't export (genuinely
+              # missing, not a version mismatch) - it's cosmetic, drop it.
+              cfg -d RT2X00_LIB_LEDS ;;
             ath9k_htc)
               cfg -e WLAN_VENDOR_ATH -m ATH9K_HW -m ATH9K_COMMON -m ATH9K_HTC ;;
             rtl8xxxu)
@@ -258,20 +280,14 @@ jobs:
             *)    : ;;
           esac
 
-          # This device's stock kernel also enables kernel-CFI and the
-          # shadow call stack. Modules built without them use a different
-          # ABI (no CFI jump tables / no SCS prologues) and the running
-          # kernel refuses to load them (ENOEXEC), even with matching
-          # vermagic. Match the device exactly.
-          # The device uses KASAN_HW_TAGS (ARM MTE), which needs assembler
-          # support our GitHub-runner binutils doesn't have ("LSE atomics
-          # not supported" earlier) - it silently falls back to KASAN_GENERIC,
-          # and HAS_LTO_CLANG requires '!KASAN || KASAN_HW_TAGS', so generic
-          # KASAN blocks LTO outright. KASAN is a debugging aid, not part of
-          # the module ABI the running kernel checks - drop it entirely
-          # rather than fight the assembler for MTE support we don't need.
-          ./scripts/config --file out/.config -d KASAN -d KASAN_GENERIC -d KASAN_HW_TAGS -d KASAN_SW_TAGS
-
+          # This device's stock kernel also enables kernel-CFI, the shadow
+          # call stack, and KASAN_HW_TAGS (ARM MTE). Modules built without
+          # matching these use a different ABI/symbol CRCs and the running
+          # kernel refuses to load them. Now that the as-instr probe above
+          # can see MTE/LSE-atomics support via Clang's integrated
+          # assembler, the device config's own KASAN_HW_TAGS=y should
+          # resolve correctly - only force CFI/SCS/LTO, which don't have
+          # an assembler-capability gate of their own.
           ./scripts/config --file out/.config \
             -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN \
             -e CFI_CLANG -e CFI_CLANG_SHADOW -e SHADOW_CALL_STACK
