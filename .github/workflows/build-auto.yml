@@ -263,6 +263,15 @@ jobs:
           # ABI (no CFI jump tables / no SCS prologues) and the running
           # kernel refuses to load them (ENOEXEC), even with matching
           # vermagic. Match the device exactly.
+          # The device uses KASAN_HW_TAGS (ARM MTE), which needs assembler
+          # support our GitHub-runner binutils doesn't have ("LSE atomics
+          # not supported" earlier) - it silently falls back to KASAN_GENERIC,
+          # and HAS_LTO_CLANG requires '!KASAN || KASAN_HW_TAGS', so generic
+          # KASAN blocks LTO outright. KASAN is a debugging aid, not part of
+          # the module ABI the running kernel checks - drop it entirely
+          # rather than fight the assembler for MTE support we don't need.
+          ./scripts/config --file out/.config -d KASAN -d KASAN_GENERIC -d KASAN_HW_TAGS -d KASAN_SW_TAGS
+
           ./scripts/config --file out/.config \
             -e ARCH_SUPPORTS_LTO_CLANG -e ARCH_SUPPORTS_LTO_CLANG_THIN \
             -e CFI_CLANG -e CFI_CLANG_SHADOW -e SHADOW_CALL_STACK
