@@ -244,7 +244,7 @@ jobs:
             *)    : ;;
           esac
 
-          make LLVM=1 ARCH=arm64 O=out olddefconfig
+          make LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out olddefconfig
           echo "--- result ---"
           grep -E "CONFIG_(CFG80211=|MAC80211=|MT76|RT2X00|RT2800|ATH9K|RTL8XXXU|DEBUG_INFO_BTF|LTO_CLANG)" out/.config || true
 
@@ -253,7 +253,7 @@ jobs:
         run: |
           export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
           # modules_prepare lets out-of-tree drivers build against this config
-          make LLVM=1 ARCH=arm64 O=out modules_prepare
+          make LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out modules_prepare
 
       - name: Add swap
         run: |
@@ -268,7 +268,7 @@ jobs:
         working-directory: ks
         run: |
           export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
-          make LLVM=1 ARCH=arm64 O=out -j$(nproc)
+          make LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- O=out -j$(nproc)
 
       - name: Build out-of-tree Realtek driver
         if: ${{ github.event.inputs.driver == 'rtl88xxau_oot' }}
