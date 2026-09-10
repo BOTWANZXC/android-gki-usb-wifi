@@ -202,6 +202,15 @@ jobs:
             make LLVM=1 LLVM_IAS=1 ARCH=arm64 O=out gki_defconfig
           fi
 
+          # The device's real .config references an UNUSED_KSYMS_WHITELIST file
+          # path from the OEM's own internal build server - it only trims which
+          # symbols the ORIGINAL vmlinux build exports, which is irrelevant here
+          # since we're not building/flashing vmlinux, only external modules
+          # against the kernel that's already running. Drop it so prepare/build
+          # doesn't choke looking for a file that only ever existed on their CI.
+          ./scripts/config --file out/.config -d TRIM_UNUSED_KSYMS
+          ./scripts/config --file out/.config --set-str UNUSED_KSYMS_WHITELIST "" || true
+
           # Base symbols every path needs
           ./scripts/config --file out/.config -e WLAN -m CFG80211 -e USB
 
